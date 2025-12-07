@@ -1,11 +1,11 @@
 // main.ts
-import { verifyKey } from "https://deno.land/x/discord_interactions@1.0.0/mod.ts";
+import { verifyKey } from "https://deno.land/x/discordeno_interactions@0.1.0/mod.ts";
 import { handleCommand } from "./commands/index.ts";
 import { autoRegisterCommands } from "./register.ts";
 
 const PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY")!;
 
-// Auto register all commands on startup
+// Auto register commands on startup
 autoRegisterCommands();
 
 async function handler(req: Request): Promise<Response> {
@@ -13,17 +13,17 @@ async function handler(req: Request): Promise<Response> {
   const timestamp = req.headers.get("x-signature-timestamp");
   const body = await req.text();
 
-  // Verify
+  // Verify request
   const valid = await verifyKey(body, signature!, timestamp!, PUBLIC_KEY);
   if (!valid) return new Response("invalid signature", { status: 401 });
 
-  const json = JSON.parse(body);
+  const interaction = JSON.parse(body);
 
-  // Discord PING check
-  if (json.type === 1) return Response.json({ type: 1 });
+  // Ping
+  if (interaction.type === 1) return Response.json({ type: 1 });
 
-  // Slash command
-  if (json.type === 2) return handleCommand(json);
+  // Handle slash commands
+  if (interaction.type === 2) return handleCommand(interaction);
 
   return new Response("Unhandled interaction");
 }
