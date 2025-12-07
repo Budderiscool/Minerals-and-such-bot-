@@ -1,33 +1,17 @@
 // main.ts
-import { verifyKey } from "https://deno.land/x/discordeno_interactions@0.1.0/mod.ts";
-import { handleCommand } from "./commands/index.ts";
-import { autoRegisterCommands } from "./register.ts";
+import { importKeyRaw, discordInteraction } from "./deps.ts";
+import { commands } from "./commands.ts";
 
-const PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY")!;
-
-// Auto register commands on startup
-autoRegisterCommands();
-
-async function handler(req: Request): Promise<Response> {
-  const signature = req.headers.get("x-signature-ed25519");
-  const timestamp = req.headers.get("x-signature-timestamp");
-  const body = await req.text();
-
-  // Verify request
-  const valid = await verifyKey(body, signature!, timestamp!, PUBLIC_KEY);
-  if (!valid) return new Response("invalid signature", { status: 401 });
-
-  const interaction = JSON.parse(body);
-
-  // Ping
-  if (interaction.type === 1) return Response.json({ type: 1 });
-
-  // Handle slash commands
-  if (interaction.type === 2) return handleCommand(interaction);
-
-  return new Response("Unhandled interaction");
+const PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY");
+if (!PUBLIC_KEY) {
+  console.error("ERROR: DISCORD_PUBLIC_KEY not set.");
+  Deno.exit(1);
 }
 
-addEventListener("fetch", (event) => {
-  event.respondWith(handler(event.request));
+const key = await importKeyRaw(PUBLIC_KEY);
+
+const handler = await discordInteraction(key, commands);
+
+addEventListener("fetch", (e) => {
+  e.respondWith(handler(e.request));
 });
