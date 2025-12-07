@@ -1,5 +1,5 @@
 // commands.ts
-import { Command } from "./deps.ts";
+import type { Command } from "./deps.ts";
 
 export const commands: Command[] = [
   {
