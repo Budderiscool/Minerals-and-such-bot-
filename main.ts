@@ -1,37 +1,26 @@
 // main.ts
-import { importKeyRaw, discordInteraction } from "jsr:@maks11060/discord-interactions@0.0.8";
+import { Client, Intents } from "https://deno.land/x/harmony/mod.ts";
+import { commands } from "./commands.ts";
 
-const PUBLIC_KEY = Deno.env.get("DISCORD_PUBLIC_KEY");
-if (!PUBLIC_KEY) throw new Error("DISCORD_PUBLIC_KEY not set");
+const TOKEN = Deno.env.get("DISCORD_TOKEN");
+if (!TOKEN) throw new Error("DISCORD_TOKEN not set");
 
-// Import the raw key
-const key = await importKeyRaw(PUBLIC_KEY);
+const client = new Client({
+  intents: [Intents.GUILDS],
+});
 
-// Array of [commandObject, handlerFunction] tuples
-const handler = await discordInteraction([
-  [
-    {
-      name: "ping",
-      description: "Replies with Pong!",
-      type: 1, // ChatInput
-    },
-    async (interaction) => {
-      return interaction.reply({ content: "Pong!" });
-    },
-  ],
-  [
-    {
-      name: "help",
-      description: "Shows help message",
-      type: 1,
-    },
-    async (interaction) => {
-      return interaction.reply({
-        content: "Available commands: /ping, /help",
-      });
-    },
-  ],
-]);
+client.on("ready", () => {
+  console.log(`Logged in as ${client.user?.tag}`);
+});
 
-// Handle incoming HTTP requests from Discord
-addEventListener("fetch", (e) => e.respondWith(handler(e.request)));
+// Handle slash commands
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isCommand()) return;
+
+  const command = commands[interaction.data.name];
+  if (!command) return;
+
+  await interaction.respond({ content: await command.run(interaction) });
+});
+
+await client.connect(TOKEN);
